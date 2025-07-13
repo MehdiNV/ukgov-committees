@@ -86,15 +86,17 @@ function renderMeetings(meetings) {
     const startDate = new Date(meeting.startDate).toLocaleString();
     const endDate = new Date(meeting.endDate).toLocaleString();
 
+    const committeeLink = meeting.committees[0].websiteLegacyUrl;
+
     card.innerHTML = `
       <div class="card-body">
         <h5 class="card-title">${meeting.committees[0].name}</h5>
         <h5 class="card-title">${meeting.eventType.name}</h5>
         <h6 class="card-subtitle mb-2 text-muted">${startDate}</h6>
         <h6 class="card-subtitle mb-2 text-muted">${endDate}</h6>
-        <p class="card-text"><strong>Topic:</strong> ${meeting.eventType.description || "N/A"}</p>
+        <p class="card-text"><strong>Topic:</strong> ${meeting.committeeBusinesses[0].title || "N/A"}</p>
         <p class="card-text"><strong>Location:</strong> ${meeting.location || (meeting.isRemote ? "Remote" : "TBA")}</p>
-        ${meeting.broadcast?.webcastUrl ? `<a href="${meeting.broadcast.webcastUrl}" class="card-link" target="_blank">Watch Live</a>` : ""}
+        ${committeeLink ? `<a href="${committeeLink}" class="card-link" target="_blank">Visit Committee Page</a>` : ""}
       </div>
     `;
 
