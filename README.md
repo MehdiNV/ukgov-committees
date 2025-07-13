@@ -5,3 +5,6 @@ Graphic design isn't sadly my passion - please excuse the simplicity of the webs
 
 To run via local development, run...
 `npx serve .`
+
+To access remotely, visit...
+https://mehdinv.github.io/ukgov-committees/
