@@ -12,7 +12,7 @@ function getFutureDate() {
 // === Load all committees ===
 async function loadCommittees() {
   try {
-    const res = await fetch("https://corsproxy.io/?https://committees-api.parliament.uk/api/Committees");
+    const res = await fetch("https://corsproxy.io/?https://committees-api.parliament.uk/api/Committees?Take=200");
     const data = await res.json();
 
     const select = document.getElementById("committee-select");
@@ -41,23 +41,31 @@ async function fetchMeetings(committeeIds = []) {
   }
 
   const fromDate = getTodayDate();
-  const toDate = getFutureDate();
   let url = `https://corsproxy.io/?https://committees-api.parliament.uk/api/Events?startDateFrom=${fromDate}`;
 
-  // Add each committee ID to the query
-  committeeIds.forEach(id => {
-    url += `&committeeId=${id}`;
-  });
+  const allMeetings = [];
 
   try {
-    const res = await fetch(url);
-    const data = await res.json();
-    renderMeetings(data.items || []);
-  } catch (err) {
-    console.error("Error fetching meetings:", err);
-    alert("Failed to fetch meetings.");
+      for (const id of committeeIds) {
+        const url = `https://corsproxy.io/?https://committees-api.parliament.uk/api/Events?startDateFrom=${fromDate}&committeeId=${id}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.items && Array.isArray(data.items)) {
+          allMeetings.push(...data.items);
+        }
+      }
+
+      // Optional: sort by date
+      allMeetings.sort((a, b) => new Date(a.meetingDate) - new Date(b.meetingDate));
+
+      // Render all combined results
+      renderMeetings(allMeetings);
+    } catch (err) {
+      console.error("Error fetching meetings:", err);
+      alert("Failed to fetch meetings. Please try again.");
+    }
   }
-}
 
 function renderMeetings(meetings) {
   const container = document.getElementById("meeting-results");
@@ -80,6 +88,7 @@ function renderMeetings(meetings) {
 
     card.innerHTML = `
       <div class="card-body">
+        <h5 class="card-title">${meeting.committees[0].name}</h5>
         <h5 class="card-title">${meeting.eventType.name}</h5>
         <h6 class="card-subtitle mb-2 text-muted">${startDate}</h6>
         <h6 class="card-subtitle mb-2 text-muted">${endDate}</h6>
