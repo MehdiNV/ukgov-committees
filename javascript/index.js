@@ -1,10 +1,16 @@
-// index.js
+// === Utility: Format date ===
+function getTodayDate() {
+  return new Date().toISOString().split("T")[0];
+}
 
-// Fetch committee data and populate the select dropdown
+function getFutureDate() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().split("T")[0];
+}
+
+// === Load all committees ===
 async function loadCommittees() {
-  console.log("Trying to fetch Commmittees from API...");
-
-
   try {
     const res = await fetch("https://corsproxy.io/?https://committees-api.parliament.uk/api/Committees");
     const data = await res.json();
@@ -12,34 +18,88 @@ async function loadCommittees() {
     const select = document.getElementById("committee-select");
     select.innerHTML = ""; // clear any existing options
 
-    data.items.forEach(committee => {
-      const option = document.createElement("option");
-      option.value = committee.id;
-      option.textContent = committee.name;
-      select.appendChild(option);
+    data.items.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      select.appendChild(opt);
     });
 
-    // Re-initialize or refresh Bootstrap Select
+    // Refresh the Bootstrap Select UI
     $('.selectpicker').selectpicker('refresh');
-
   } catch (err) {
     console.error("Error loading committees:", err);
+    alert("Failed to load committees.");
   }
 }
 
-// Listen for user selections
-function handleSelectionChange() {
-  $('#committee-select').on('changed.bs.select', function () {
-    const selectedIds = $(this).val(); // Array of selected committee IDs
-    console.log("Selected committee IDs:", selectedIds);
+// === Fetch meetings for selected committee IDs ===
+async function fetchMeetings(committeeIds = []) {
+  if (committeeIds.length === 0) {
+    alert("Please select at least one committee.");
+    return;
+  }
 
-    // You could trigger a meeting fetch here:
-    // loadMeetings(selectedIds);
+  const fromDate = getTodayDate();
+  const toDate = getFutureDate();
+  let url = `https://corsproxy.io/?https://committees-api.parliament.uk/api/Events?startDateFrom=${fromDate}`;
+
+  // Add each committee ID to the query
+  committeeIds.forEach(id => {
+    url += `&committeeId=${id}`;
+  });
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    renderMeetings(data.items || []);
+  } catch (err) {
+    console.error("Error fetching meetings:", err);
+    alert("Failed to fetch meetings.");
+  }
+}
+
+function renderMeetings(meetings) {
+  const container = document.getElementById("meeting-results");
+  container.innerHTML = ""; // Clear previous results
+
+  if (meetings.length === 0) {
+    container.innerHTML = `<p class="text-muted">No upcoming meetings found.</p>`;
+    return;
+  }
+
+  console.log("Meetings data is...");
+  console.log(meetings);
+
+  meetings.forEach(meeting => {
+    const card = document.createElement("div");
+    card.className = "card mb-3";
+
+    const startDate = new Date(meeting.startDate).toLocaleString();
+    const endDate = new Date(meeting.endDate).toLocaleString();
+
+    card.innerHTML = `
+      <div class="card-body">
+        <h5 class="card-title">${meeting.eventType.name}</h5>
+        <h6 class="card-subtitle mb-2 text-muted">${startDate}</h6>
+        <h6 class="card-subtitle mb-2 text-muted">${endDate}</h6>
+        <p class="card-text"><strong>Topic:</strong> ${meeting.eventType.description || "N/A"}</p>
+        <p class="card-text"><strong>Location:</strong> ${meeting.location || (meeting.isRemote ? "Remote" : "TBA")}</p>
+        ${meeting.broadcast?.webcastUrl ? `<a href="${meeting.broadcast.webcastUrl}" class="card-link" target="_blank">Watch Live</a>` : ""}
+      </div>
+    `;
+
+    container.appendChild(card);
   });
 }
 
-// Init everything when
+// === Event Binding ===
 document.addEventListener("DOMContentLoaded", () => {
   loadCommittees();
-  handleSelectionChange();
+
+  // Button click: fetch meetings
+  document.getElementById("fetch-meetings-btn").addEventListener("click", () => {
+    const selected = $("#committee-select").val(); // get selected values
+    fetchMeetings(selected);
+  });
 });
